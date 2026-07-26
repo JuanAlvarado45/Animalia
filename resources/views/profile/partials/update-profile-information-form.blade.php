@@ -47,6 +47,19 @@
             @endif
         </div>
 
+        <div>
+            <x-input-label for="telefono" :value="__('Teléfono')" />
+            <x-text-input id="telefono" name="telefono" type="text" class="mt-1 block w-full" :value="old('telefono', $user->telefono)" placeholder="Ej. 55 1234 5678" />
+            <x-input-error class="mt-2" :messages="$errors->get('telefono')" />
+            <p class="text-xs text-gray-400 mt-1">Este número será visible para cualquier persona que escanee el QR de tus mascotas en caso de extravío.</p>
+        </div>
+
+        <div>
+            <x-input-label for="direccion" :value="__('Dirección')" />
+            <x-text-input id="direccion" name="direccion" type="text" class="mt-1 block w-full" :value="old('direccion', $user->direccion)" placeholder="Calle, número, colonia" />
+            <x-input-error class="mt-2" :messages="$errors->get('direccion')" />
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Guardar') }}</x-primary-button>
 
