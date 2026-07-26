@@ -1,0 +1,1 @@
+<img src="{{ asset('img/logoanif.png') }}" alt="Animalía" {{ $attributes }}>

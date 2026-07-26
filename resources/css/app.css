@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+a, button, .group {
+    cursor: url('/imG/paw-cursor.svg') 16 16, pointer;
+}
