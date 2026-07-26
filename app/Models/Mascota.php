@@ -22,6 +22,7 @@ class Mascota extends Model
         'sexo',
         'foto',
         'extraviado',
+        'qr_path',
     ];
 
     /**
