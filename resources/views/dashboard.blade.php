@@ -1,4 +1,3 @@
-
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -90,7 +89,16 @@
                     </a>
                 </div>
             @else
-                <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="bg-white rounded-xl shadow-md p-6"
+                     x-data="{
+                         modalAbierto: false,
+                         mascotaSeleccionada: null,
+                         verMascota(mascota) {
+                             this.mascotaSeleccionada = mascota;
+                             this.modalAbierto = true;
+                         }
+                     }">
+
                     <div class="flex justify-between items-center mb-4">
                         <h4 class="font-semibold text-gray-900">Tus mascotas</h4>
                         <a href="{{ route('mascotas.index') }}" class="text-sm text-primary hover:underline">Ver todas →</a>
@@ -98,8 +106,17 @@
 
                     <div class="grid sm:grid-cols-3 gap-4">
                         @foreach ($mascotas as $mascota)
-                            <a href="{{ route('mascotas.show', $mascota) }}"
-                            class="group flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-primary hover:shadow-md transition-all duration-300">
+                            <button @click="verMascota({
+                                        nombre: '{{ $mascota->nombre }}',
+                                        especie: '{{ ucfirst($mascota->especie) }}',
+                                        raza: '{{ $mascota->raza ?? 'No especificada' }}',
+                                        sexo: '{{ $mascota->sexo ? ucfirst($mascota->sexo) : 'No especificado' }}',
+                                        fechaNacimiento: '{{ $mascota->fecha_nacimiento ? $mascota->fecha_nacimiento->format('d/m/Y') : 'No registrada' }}',
+                                        extraviado: {{ $mascota->extraviado ? 'true' : 'false' }},
+                                        foto: '{{ $mascota->foto ? Storage::url($mascota->foto) : '' }}',
+                                        url: '{{ route('mascotas.show', $mascota) }}'
+                                    })"
+                                    class="group flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-primary hover:shadow-md transition-all duration-300 text-left">
 
                                 <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                                     @if ($mascota->foto)
@@ -115,13 +132,80 @@
                                     <p class="font-medium text-gray-900 truncate group-hover:text-primary transition-colors">{{ $mascota->nombre }}</p>
                                     <p class="text-xs text-gray-500">{{ ucfirst($mascota->especie) }}</p>
                                 </div>
-                            </a>
+                            </button>
                         @endforeach
                     </div>
+
+                    <!-- Modal de consulta rápida -->
+                    <div x-show="modalAbierto"
+                         x-cloak
+                         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                         @click.self="modalAbierto = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0"
+                         x-transition:enter-end="opacity-100">
+
+                        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100">
+
+                            <template x-if="mascotaSeleccionada">
+                                <div>
+                                    <!-- Foto / encabezado -->
+                                    <div class="h-40 bg-primary/10 flex items-center justify-center relative">
+                                        <template x-if="mascotaSeleccionada.foto">
+                                            <img :src="mascotaSeleccionada.foto" class="w-full h-full object-cover">
+                                        </template>
+                                        <template x-if="!mascotaSeleccionada.foto">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 12c2.5 0 4.5-2.24 4.5-5S14.5 2 12 2 7.5 4.24 7.5 7s2 5 4.5 5zM5 22c0-4.5 3-8 7-8s7 3.5 7 8" />
+                                            </svg>
+                                        </template>
+
+                                        <button @click="modalAbierto = false" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="p-6">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <h3 class="text-xl font-bold text-gray-900" x-text="mascotaSeleccionada.nombre"></h3>
+                                            <span :class="mascotaSeleccionada.extraviado ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'"
+                                                  class="text-xs font-medium px-2 py-1 rounded-full"
+                                                  x-text="mascotaSeleccionada.extraviado ? 'Extraviado' : 'Al día'">
+                                            </span>
+                                        </div>
+
+                                        <dl class="grid grid-cols-2 gap-y-3 text-sm">
+                                            <dt class="text-gray-500">Especie</dt>
+                                            <dd class="text-gray-900 font-medium" x-text="mascotaSeleccionada.especie"></dd>
+
+                                            <dt class="text-gray-500">Raza</dt>
+                                            <dd class="text-gray-900 font-medium" x-text="mascotaSeleccionada.raza"></dd>
+
+                                            <dt class="text-gray-500">Sexo</dt>
+                                            <dd class="text-gray-900 font-medium" x-text="mascotaSeleccionada.sexo"></dd>
+
+                                            <dt class="text-gray-500">Nacimiento</dt>
+                                            <dd class="text-gray-900 font-medium" x-text="mascotaSeleccionada.fechaNacimiento"></dd>
+                                        </dl>
+
+                                        <a :href="mascotaSeleccionada.url"
+                                           class="block text-center mt-6 py-2.5 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200">
+                                            Ver expediente completo
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                 </div>
             @endif
 
         </div>
     </div>
 </x-app-layout>
-
