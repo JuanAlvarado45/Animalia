@@ -119,4 +119,41 @@ class MascotaController extends Controller
         return redirect()->route('mascotas.index')
             ->with('success', 'Mascota eliminada correctamente.');
     }
+    public function guardarQr(Request $request, Mascota $mascota)
+    {
+        $request->validate([
+            'qr_image' => 'required|string'
+        ]);
+
+        // La imagen viene en Base64 desde el frontend
+        $image_parts = explode(";base64,", $request->qr_image);
+        $image_type_aux = explode("image/", $image_parts[0]);
+        $image_type = $image_type_aux[1];
+        $image_base64 = base64_decode($image_parts[1]);
+
+        // Crear un nombre único para el archivo
+        $fileName = 'qr_mascotas/' . $mascota->id . '_' . uniqid() . '.png';
+
+        // Guardar en el storage (storage/app/public/qr_mascotas)
+        Storage::disk('public')->put($fileName, $image_base64);
+
+        // Guardar la ruta en la base de datos
+        $mascota->update([
+            'qr_path' => $fileName
+        ]);
+
+        return response()->json([
+            'success' => true, 
+            'qr_url' => Storage::url($fileName)
+        ]);
+    }
+
+    public function perfilQr(Mascota $mascota)
+    {
+        // Cargar los datos del dueño (usuario) asociado a la mascota
+        $mascota->load('user');
+        
+        return view('mascotas.qr-perfil', compact('mascota'));
+    }
+
 }
