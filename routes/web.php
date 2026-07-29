@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MascotaController;
+use App\Http\Controllers\RecordatorioController;
+use App\Http\Controllers\MedicinaController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -31,9 +33,15 @@ Route::middleware('auth')->group(function () {
     
     // RUTA PRIVADA: Guardar el QR (Solo el dueño puede hacerlo)
     Route::post('/mascotas/{mascota}/guardar-qr', [MascotaController::class, 'guardarQr'])->name('mascotas.guardarQr');
+
+    // Rutas de recordatorios (expediente / medicina preventiva)
+    Route::post('/mascotas/{mascota}/recordatorios', [RecordatorioController::class, 'store'])->name('recordatorios.store');
+    Route::put('/recordatorios/{recordatorio}', [RecordatorioController::class, 'update'])->name('recordatorios.update');
+    Route::patch('/recordatorios/{recordatorio}/aplicar', [RecordatorioController::class, 'marcarAplicado'])->name('recordatorios.marcarAplicado');
+    Route::delete('/recordatorios/{recordatorio}', [RecordatorioController::class, 'destroy'])->name('recordatorios.destroy');
     
     // Otras vistas
-    Route::get('/medicina-preventiva', function () {return view('medicina.index');})->name('medicina.index');
+    Route::get('/medicina-preventiva', [MedicinaController::class, 'index'])->name('medicina.index');
     Route::get('/mapa-emergencias', function () {return view('mapa.index');})->name('mapa.index');
 });
 

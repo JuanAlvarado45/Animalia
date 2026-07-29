@@ -60,7 +60,18 @@ class MascotaController extends Controller
      */
     public function show(Mascota $mascota)
     {
-        //
+            $this->authorize('view', $mascota);
+
+        $mascota->load(['recordatorios' => function ($query) {
+            $query->orderBy('fecha_programada', 'desc');
+        }]);
+
+        $vencidos = $mascota->recordatorios->filter(fn ($r) => $r->estado_actual === 'vencido');
+        $proximos = $mascota->recordatorios->filter(fn ($r) => $r->estado_actual === 'pendiente');
+        $aplicados = $mascota->recordatorios->filter(fn ($r) => $r->estado_actual === 'aplicado');
+
+        return view('mascotas.show', compact('mascota', 'vencidos', 'proximos', 'aplicados'));
+
     }
 
     /**
@@ -87,6 +98,9 @@ class MascotaController extends Controller
             'sexo' => ['nullable', 'in:macho,hembra'],
             'foto' => ['nullable', 'image', 'max:2048'],
             'extraviado' => ['nullable', 'boolean'],
+            'peso' => ['nullable', 'numeric', 'min:0', 'max:999.99'],
+            'alergias' => ['nullable', 'string', 'max:2000'],
+            'condiciones_medicas' => ['nullable', 'string', 'max:2000'],
         ]);
 
         if ($request->hasFile('foto')) {
