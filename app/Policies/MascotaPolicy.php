@@ -20,9 +20,9 @@ class MascotaPolicy
      * Determine whether the user can view the model.
      */
     public function view(User $user, Mascota $mascota): bool
-    {
-        return false;
-    }
+{
+    return $user->id === $mascota->user_id;
+}
 
     /**
      * Determine whether the user can create models.
