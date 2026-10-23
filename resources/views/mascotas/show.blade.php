@@ -1,0 +1,547 @@
+<x-app-layout>
+    <!-- 1. Cargamos Marked.js primero para que esté listo cuando Alpine lo necesite -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- 2. Estilos ultra profesionales para el contenido generado por IA (Markdown) -->
+    <style>
+        /* Tipografía y espaciado general */
+        .chat-markdown { line-height: 1.6; }
+        .chat-markdown p { margin-bottom: 0.75rem; }
+        .chat-markdown p:last-child { margin-bottom: 0; }
+        
+        /* Negritas y énfasis */
+        .chat-markdown strong { font-weight: 800 !important; color: #0f172a; }
+        .chat-markdown em { font-style: italic; }
+
+        /* Listas hermosas (Usamos !important para vencer el reseteo de Tailwind) */
+        .chat-markdown ul { 
+            list-style-type: disc !important; 
+            padding-left: 1.5rem !important; 
+            margin-bottom: 0.75rem !important; 
+        }
+        .chat-markdown ol { 
+            list-style-type: decimal !important; 
+            padding-left: 1.5rem !important; 
+            margin-bottom: 0.75rem !important; 
+        }
+        .chat-markdown li { margin-bottom: 0.25rem; }
+
+        /* Tablas profesionales */
+        .chat-markdown table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        .chat-markdown th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .chat-markdown td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .chat-markdown tr:last-child td { border-bottom: none; }
+        
+        /* Títulos si la IA los genera */
+        .chat-markdown h3, .chat-markdown h4 {
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+
+    <x-slot name="header">
+        <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('Expediente de :nombre', ['nombre' => $mascota->nombre]) }}
+            </h2>
+            <a href="{{ route('mascotas.index') }}" class="text-sm text-primary hover:underline">← Volver a mis mascotas</a>
+        </div>
+    </x-slot>
+
+    <div x-data="expedienteComponent()" class="py-10">
+        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-8">
+
+            @if (session('success'))
+                <div class="bg-primary/10 border border-primary/30 text-primary-dark rounded-xl p-4">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
+                    <p class="font-semibold mb-1">Revisa los siguientes datos:</p>
+                    <ul class="list-disc list-inside text-sm">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <!-- Encabezado del expediente -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="sm:flex">
+                    <div class="sm:w-56 h-56 sm:h-auto bg-primary/10 flex items-center justify-center shrink-0">
+                        @if ($mascota->foto)
+                            <img src="{{ Storage::url($mascota->foto) }}" alt="{{ $mascota->nombre }}" class="w-full h-full object-cover">
+                        @else
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 12c2.5 0 4.5-2.24 4.5-5S14.5 2 12 2 7.5 4.24 7.5 7s2 5 4.5 5zM5 22c0-4.5 3-8 7-8s7 3.5 7 8" />
+                            </svg>
+                        @endif
+                    </div>
+
+                    <div class="p-6 flex-1">
+                        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-900">{{ $mascota->nombre }}</h3>
+                                <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{$mascota->raza }} @endif</p>
+                            </div>
+                            @if ($mascota->extraviado)
+                                <span class="text-xs font-semibold bg-red-100 text-red-600 px-3 py-1.5 rounded-full">Reportada como extraviada</span>
+                            @else
+                                <span class="text-xs font-semibold bg-green-100 text-green-700 px-3 py-1.5 rounded-full">Al resguardo de su familia</span>
+                            @endif
+                        </div>
+
+                        <dl class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 text-sm">
+                            <div>
+                                <dt class="text-gray-400">Sexo</dt>
+                                <dd class="font-medium text-gray-900">{{ $mascota->sexo ? ucfirst($mascota->sexo) : '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-gray-400">Edad</dt>
+                                <dd class="font-medium text-gray-900">{{ $mascota->edad ?? '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-gray-400">Peso</dt>
+                                <dd class="font-medium text-gray-900">{{ $mascota->peso ? $mascota->peso.' kg' : '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-gray-400">Nacimiento</dt>
+                                <dd class="font-medium text-gray-900">{{ $mascota->fecha_nacimiento?->format('d/m/Y') ?? '—' }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="flex gap-2 mt-6">
+                            <a href="{{ route('mascotas.edit', $mascota) }}" class="text-sm px-4 py-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition">
+                                Editar datos generales
+                            </a>
+                            <button type="button" @click="modalMedico = true" class="text-sm px-4 py-2 rounded-md bg-primary/10 text-primary font-medium hover:bg-primary hover:text-white transition">
+                                Editar alertas médicas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alertas médicas -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    Alertas médicas
+                </h3>
+
+                <div class="grid sm:grid-cols-2 gap-4 text-sm">
+                    <div class="bg-red-50/60 border border-red-100 rounded-lg p-4">
+                        <p class="font-semibold text-red-700 mb-1">Alergias</p>
+                        <p class="text-gray-700 whitespace-pre-line">{{ $mascota->alergias ?: 'Sin alergias registradas.' }}</p>
+                    </div>
+                    <div class="bg-amber-50/60 border border-amber-100 rounded-lg p-4">
+                        <p class="font-semibold text-amber-700 mb-1">Condiciones médicas</p>
+                        <p class="text-gray-700 whitespace-pre-line">{{ $mascota->condiciones_medicas ?: 'Sin condiciones registradas.' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de recordatorios -->
+            <div class="grid sm:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-400">
+                    <p class="text-sm text-gray-500">Vencidos</p>
+                    <p class="text-3xl font-bold text-red-500">{{ $vencidos->count() }}</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-secondary">
+                    <p class="text-sm text-gray-500">Próximos</p>
+                    <p class="text-3xl font-bold text-secondary">{{ $proximos->count() }}</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-primary">
+                    <p class="text-sm text-gray-500">Aplicados</p>
+                    <p class="text-3xl font-bold text-primary">{{ $aplicados->count() }}</p>
+                </div>
+            </div>
+
+            <!-- Historial de medicina preventiva -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-semibold text-gray-900">Vacunas, desparasitaciones y chequeos</h3>
+                    <button type="button" @click="modalRecordatorio = true" class="text-sm px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition">
+                        + Agregar recordatorio
+                    </button>
+                </div>
+
+                @if ($mascota->recordatorios->isEmpty())
+                    <p class="text-sm text-gray-500 py-8 text-center">Aún no hay recordatorios registrados para {{ $mascota->nombre }}.</p>
+                @else
+                    <div class="space-y-4">
+                        @foreach ($mascota->recordatorios->sortBy('fecha_programada') as $r)
+                            <div class="flex items-start gap-4 {{ $r->estado_actual === 'aplicado' ? 'opacity-60' : '' }}">
+                                <div @class([
+                                        'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
+                                        'bg-red-100' => $r->estado_actual === 'vencido',
+                                        'bg-secondary/10' => $r->estado_actual === 'pendiente',
+                                        'bg-primary/10' => $r->estado_actual === 'aplicado',
+                                    ])>
+                                    <svg xmlns="http://www.w3.org/2000/svg" @class([
+                                            'h-5 w-5',
+                                            'text-red-500' => $r->estado_actual === 'vencido',
+                                            'text-secondary' => $r->estado_actual === 'pendiente',
+                                            'text-primary' => $r->estado_actual === 'aplicado',
+                                        ]) fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        @if ($r->estado_actual === 'aplicado')
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        @else
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M4.5 6h15a.75.75 0 01.75.75v12a.75.75 0 01-.75.75h-15a.75.75 0 01-.75-.75v-12A.75.75 0 014.5 6z" />
+                                        @endif
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex flex-wrap justify-between items-center gap-2">
+                                        <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{$r->titulo }}</p>
+                                        @if ($r->estado_actual === 'vencido')
+                                            <span class="text-xs font-medium bg-red-100 text-red-600 px-2 py-1 rounded-full">Vencido</span>
+                                        @elseif ($r->estado_actual === 'aplicado')
+                                            <span class="text-xs font-medium bg-primary/10 text-primary px-2 py-1 rounded-full">Aplicado</span>
+                                        @else
+                                            <span class="text-xs font-medium bg-secondary/10 text-secondary px-2 py-1 rounded-full">Pendiente</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-sm text-gray-500">
+                                        @if ($r->estado_actual === 'aplicado')
+                                            Aplicado el {{ $r->fecha_aplicacion?->format('d/m/Y') }}
+                                        @else
+                                            Programado para el {{ $r->fecha_programada->format('d/m/Y') }}
+                                        @endif
+                                    </p>
+                                    @if ($r->descripcion)
+                                        <p class="text-sm text-gray-500 mt-1">{{ $r->descripcion }}</p>
+                                    @endif
+                                </div>
+
+                                <div class="flex gap-2 shrink-0">
+                                    @if ($r->estado_actual !== 'aplicado')
+                                        <form action="{{ route('recordatorios.marcarAplicado', $r) }}" method="POST">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="text-xs px-3 py-1.5 rounded-md border border-primary text-primary font-medium hover:bg-primary hover:text-white transition">
+                                                Marcar aplicado
+                                            </button>
+                                        </form>
+                                    @endif
+                                    <form action="{{ route('recordatorios.destroy', $r) }}" method="POST" onsubmit="return confirm('¿Eliminar este recordatorio?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-xs px-3 py-1.5 rounded-md border border-red-300 text-red-500 font-medium hover:bg-red-500 hover:text-white transition">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- MODAL: Agregar recordatorio -->
+        <template x-teleport="body">
+            <div x-show="modalRecordatorio" style="display: none;" class="fixed inset-0 z-[9999] overflow-y-auto">
+                <div x-show="modalRecordatorio" x-transition.opacity class="fixed inset-0 bg-gray-900 bg-opacity-60" @click="modalRecordatorio = false"></div>
+
+                <div class="flex items-center justify-center min-h-screen p-4 relative">
+                    <div x-show="modalRecordatorio"
+                        x-transition:enter="ease-out duration-200"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Nuevo recordatorio para {{ $mascota->nombre }}</h3>
+
+                        <form method="POST" action="{{ route('recordatorios.store', $mascota) }}" class="space-y-4">
+                            @csrf
+
+                            <div>
+                                <x-input-label for="tipo" value="Tipo" />
+                                <select id="tipo" name="tipo" required class="block mt-1 w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary">
+                                    <option value="vacuna">Vacuna</option>
+                                    <option value="desparasitacion">Desparasitación</option>
+                                    <option value="chequeo">Chequeo médico</option>
+                                    <option value="medicamento">Medicamento</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <x-input-label for="titulo" value="Título" />
+                                <x-text-input id="titulo" name="titulo" type="text" class="block mt-1 w-full" placeholder="Ej. Vacuna antirrábica" required />
+                            </div>
+
+                            <div>
+                                <x-input-label for="fecha_programada" value="Fecha programada" />
+                                <x-text-input id="fecha_programada" name="fecha_programada" type="date" class="block mt-1 w-full" required />
+                            </div>
+
+                            <div>
+                                <x-input-label for="descripcion" value="Notas (opcional)" />
+                                <textarea id="descripcion" name="descripcion" rows="2" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary"></textarea>
+                            </div>
+
+                            <div class="flex gap-3 pt-2">
+                                <button type="button" @click="modalRecordatorio = false" class="flex-1 py-2.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="flex-1 py-2.5 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- MODAL: Editar alertas médicas -->
+        <template x-teleport="body">
+            <div x-show="modalMedico" style="display: none;" class="fixed inset-0 z-[9999] overflow-y-auto">
+                <div x-show="modalMedico" x-transition.opacity class="fixed inset-0 bg-gray-900 bg-opacity-60" @click="modalMedico = false"></div>
+
+                <div class="flex items-center justify-center min-h-screen p-4 relative">
+                    <div x-show="modalMedico"
+                        x-transition:enter="ease-out duration-200"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Alertas médicas de {{ $mascota->nombre }}</h3>
+
+                        <form method="POST" action="{{ route('mascotas.update', $mascota) }}" enctype="multipart/form-data" class="space-y-4">
+                            @csrf
+                            @method('PUT')
+                            <!-- Se reenvían los campos requeridos por la validación de update() -->
+                            <input type="hidden" name="nombre" value="{{ $mascota->nombre }}">
+                            <input type="hidden" name="especie" value="{{ $mascota->especie }}">
+                            <input type="hidden" name="raza" value="{{ $mascota->raza }}">
+                            <input type="hidden" name="fecha_nacimiento" value="{{ $mascota->fecha_nacimiento?->format('Y-m-d') }}">
+                            <input type="hidden" name="sexo" value="{{ $mascota->sexo }}">
+                            <input type="hidden" name="extraviado" value="{{ $mascota->extraviado ? 1 : 0 }}">
+
+                            <div>
+                                <x-input-label for="peso" value="Peso (kg)" />
+                                <x-text-input id="peso" name="peso" type="number" step="0.01" min="0" class="block mt-1 w-full" :value="$mascota->peso" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="alergias" value="Alergias" />
+                                <textarea id="alergias" name="alergias" rows="2" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary">{{ $mascota->alergias }}</textarea>
+                            </div>
+
+                            <div>
+                                <x-input-label for="condiciones_medicas" value="Condiciones médicas" />
+                                <textarea id="condiciones_medicas" name="condiciones_medicas" rows="2" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary">{{ $mascota->condiciones_medicas }}</textarea>
+                            </div>
+
+                            <div class="flex gap-3 pt-2">
+                                <button type="button" @click="modalMedico = false" class="flex-1 py-2.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="flex-1 py-2.5 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        function expedienteComponent() {
+            return {
+                modalRecordatorio: false,
+                modalMedico: false,
+            }
+        }
+    </script>
+    
+    <!-- ========================================== -->
+    <!-- CHATBOT IA - ANIMALÍA (Alpine.js)          -->
+    <!-- ========================================== -->
+    <div x-data="chatBotMascota()" class="fixed bottom-6 right-6 z-50 font-sans">
+        
+        <!-- Botón flotante para abrir el chat -->
+        <button @click="abrirChat()" x-show="!abierto" x-transition.scale
+            class="bg-primary hover:bg-primary-dark text-white rounded-full p-4 shadow-2xl flex items-center justify-center transition-transform hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+        </button>
+
+        <!-- Ventana del Chat -->
+        <div x-show="abierto" style="display: none;"
+            x-transition:enter="transition ease-out duration-300 transform"
+            x-transition:enter-start="opacity-0 translate-y-10 scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="transition ease-in duration-200 transform"
+            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+            x-transition:leave-end="opacity-0 translate-y-10 scale-95"
+            class="bg-white w-80 sm:w-96 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[500px]">
+            
+            <!-- Cabecera del Chat -->
+            <div class="bg-primary p-4 flex justify-between items-center text-white shadow-md z-10">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-full">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Asistente Animalía</h3>
+                        <p class="text-xs text-primary-100 opacity-80">Consultor de {{ $mascota->nombre }}</p>
+                    </div>
+                </div>
+                <button @click="abierto = false" class="text-white hover:text-gray-200 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Área de mensajes -->
+            <div id="contenedor-mensajes" class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
+                <template x-for="(msg, index) in historial" :key="index">
+                    <div :class="msg.rol === 'user' ? 'self-end bg-primary text-white rounded-br-none' : 'self-start bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm chat-markdown'" 
+                         class="px-4 py-3 rounded-2xl max-w-[85%] text-sm">
+                        
+                        <!-- Si es el usuario, texto normal -->
+                        <div x-show="msg.rol === 'user'" x-text="msg.texto"></div>
+                        
+                        <!-- Si es el bot, renderizamos el HTML interpretado por marked.js -->
+                        <div x-show="msg.rol === 'bot'" x-html="marked.parse(msg.texto)"></div>
+                        
+                    </div>
+                </template>
+
+                <!-- Animación de "escribiendo..." -->
+                <div x-show="cargando" class="self-start bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-1">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                </div>
+            </div>
+
+            <!-- Input de texto -->
+            <div class="p-3 bg-white border-t border-gray-100">
+                <form @submit.prevent="enviarMensaje" class="flex gap-2">
+                    <input type="text" x-model="mensajeNuevo" placeholder="Pregunta sobre {{ $mascota->nombre }}..." 
+                        class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+                        :disabled="cargando" autocomplete="off">
+                    <button type="submit" :disabled="mensajeNuevo.trim() === '' || cargando"
+                        class="bg-primary text-white rounded-full p-2 w-10 h-10 flex items-center justify-center hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+function chatBotMascota() {
+            // Creamos una clave única para esta mascota para que los chats no se mezclen
+            const storageKey = 'chat_animalia_{{ $mascota->id }}';
+
+            return {
+                abierto: false,
+                mensajeNuevo: '',
+                cargando: false,
+                historial: [],
+
+                init() {
+                    // Al cargar el componente, intentamos recuperar el historial
+                    const historialGuardado = sessionStorage.getItem(storageKey);
+                    
+                    if (historialGuardado) {
+                        this.historial = JSON.parse(historialGuardado);
+                    } else {
+                        // Si no hay historial previo, ponemos el mensaje de bienvenida
+                        this.historial = [
+                            { rol: 'bot', texto: '¡Hola! Soy la IA de Animalía. ¿En qué te puedo asesorar hoy sobre {{ $mascota->nombre }}?' }
+                        ];
+                        this.guardarHistorial();
+                    }
+                },
+
+                abrirChat() {
+                    this.abierto = true;
+                    this.hacerScrollAbajo();
+                },
+
+                guardarHistorial() {
+                    // Guarda el array actual en el sessionStorage del navegador
+                    sessionStorage.setItem(storageKey, JSON.stringify(this.historial));
+                },
+
+                enviarMensaje() {
+                    if (this.mensajeNuevo.trim() === '') return;
+
+                    const textoUsuario = this.mensajeNuevo;
+                    this.historial.push({ rol: 'user', texto: textoUsuario });
+                    this.guardarHistorial(); // Guardamos después de agregar el mensaje del usuario
+
+                    this.mensajeNuevo = '';
+                    this.cargando = true;
+                    this.hacerScrollAbajo();
+
+                    // Petición real al backend de Laravel
+                    fetch(`/mascotas/{{ $mascota->id }}/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ mensaje: textoUsuario })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.cargando = false;
+                        this.historial.push({ rol: 'bot', texto: data.respuesta });
+                        this.guardarHistorial(); // Guardamos después de agregar la respuesta del bot
+                        this.hacerScrollAbajo();
+                    })
+                    .catch(error => {
+                        this.cargando = false;
+                        this.historial.push({ rol: 'bot', texto: 'Hubo un error de conexión con el servidor.' });
+                        this.guardarHistorial(); // Guardamos incluso si hubo error
+                        this.hacerScrollAbajo();
+                        console.error('Error:', error);
+                    });
+                },
+
+                hacerScrollAbajo() {
+                    setTimeout(() => {
+                        const contenedor = document.getElementById('contenedor-mensajes');
+                        if(contenedor) contenedor.scrollTop = contenedor.scrollHeight;
+                    }, 100);
+                }
+            }
+        }
+    </script>
+</x-app-layout>
