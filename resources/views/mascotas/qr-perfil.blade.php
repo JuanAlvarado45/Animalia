@@ -40,8 +40,25 @@
         <!-- Información -->
         <div class="p-6">
             <h1 class="text-3xl font-extrabold text-gray-900 text-center mb-1">{{ $mascota->nombre }}</h1>
-            <p class="text-center text-gray-500 font-medium mb-6">{{ ucfirst($mascota->especie) }} @if($mascota->raza) • {{ $mascota->raza }} @endif</p>
+            <p class="text-center text-gray-500 font-medium mb-4">{{ ucfirst($mascota->especie) }} @if($mascota->raza) • {{ $mascota->raza }} @endif</p>
 
+            <!-- Alertas médicas vitales: visibles siempre para cualquier persona que auxilie a la mascota -->
+            @if($mascota->alergias || $mascota->condiciones_medicas)
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm">
+                    <p class="font-bold text-amber-800 mb-1 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                        Información médica importante
+                    </p>
+                    @if($mascota->alergias)
+                        <p class="text-amber-900"><span class="font-semibold">Alergias:</span> {{ $mascota->alergias }}</p>
+                    @endif
+                    @if($mascota->condiciones_medicas)
+                        <p class="text-amber-900"><span class="font-semibold">Condiciones:</span> {{ $mascota->condiciones_medicas }}</p>
+                    @endif
+                </div>
+            @endif
+
+<!-- Datos de contacto (Solo se muestran completos si está extraviado) -->
             <!-- Datos de contacto (Solo se muestran completos si está extraviado) -->
             @if($mascota->extraviado)
                 <div class="bg-red-50 rounded-xl p-5 border border-red-100">

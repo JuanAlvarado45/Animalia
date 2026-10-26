@@ -58,7 +58,6 @@
             margin-bottom: 0.5rem;
         }
     </style>
-
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -106,6 +105,7 @@
                             <div>
                                 <h3 class="text-2xl font-bold text-gray-900">{{ $mascota->nombre }}</h3>
                                 <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{$mascota->raza }} @endif</p>
+                                <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{ $mascota->raza }} @endif</p>
                             </div>
                             @if ($mascota->extraviado)
                                 <span class="text-xs font-semibold bg-red-100 text-red-600 px-3 py-1.5 rounded-full">Reportada como extraviada</span>
@@ -144,8 +144,8 @@
                     </div>
                 </div>
             </div>
-
             <!-- Alertas médicas -->
+            <!-- Alertas médicas (visibles en el perfil público QR si la mascota se reporta extraviada) -->
             <div class="bg-white rounded-xl shadow-md p-6">
                 <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -219,6 +219,7 @@
                                 <div class="flex-1">
                                     <div class="flex flex-wrap justify-between items-center gap-2">
                                         <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{$r->titulo }}</p>
+                                        <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{ $r->titulo }}</p>
                                         @if ($r->estado_actual === 'vencido')
                                             <span class="text-xs font-medium bg-red-100 text-red-600 px-2 py-1 rounded-full">Vencido</span>
                                         @elseif ($r->estado_actual === 'aplicado')
@@ -384,7 +385,6 @@
             }
         }
     </script>
-    
     <!-- ========================================== -->
     <!-- CHATBOT IA - ANIMALÍA (Alpine.js)          -->
     <!-- ========================================== -->
@@ -544,4 +544,5 @@ function chatBotMascota() {
             }
         }
     </script>
+</x-app-layout>
 </x-app-layout>
