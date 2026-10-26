@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 
 class MascotaController extends Controller
 {
@@ -59,9 +60,7 @@ class MascotaController extends Controller
      */
     public function show(Mascota $mascota)
     {
-        //
         $this->authorize('view', $mascota);
-            $this->authorize('view', $mascota);
 
         $mascota->load(['recordatorios' => function ($query) {
             $query->orderBy('fecha_programada', 'desc');
@@ -164,7 +163,7 @@ class MascotaController extends Controller
         return view('mascotas.qr-perfil', compact('mascota'));
     }
 
-public function consultarIA(\Illuminate\Http\Request $request, Mascota $mascota)
+    public function consultarIA(Request $request, Mascota $mascota)
     {
         $mensajeUsuario = $request->input('mensaje');
 
@@ -173,57 +172,46 @@ public function consultarIA(\Illuminate\Http\Request $request, Mascota $mascota)
                     "Sexo: {$mascota->sexo}, Edad aproximada: {$mascota->edad}, Peso: {$mascota->peso} kg. ";
 
         $reglas = "Eres el 'Asistente Animalía', un consultor amigable. Reglas ESTRICTAS:\n" .
-                  "1. Responde ÚNICAMENTE a lo que el usuario te pregunte en su último mensaje. Si el usuario solo dice 'Hola' o saluda, devuélvele el saludo en una sola línea y pregúntale cómo puedes ayudarle. NO des consejos no solicitados ni sueltes todo el contexto.\n" .
-                  "2. Ve directo al grano. Sé extremadamente conciso y NO desgloses información extra si no te la pidieron.\n" .
+                  "1. Responde ÚNICAMENTE a lo que el usuario te pregunte en su último mensaje. Si el usuario solo dice 'Hola' o saluda, devuélvele el saludo en una sola línea y pregúntale cómo puedes ayudarle.\n" .
+                  "2. Ve directo al grano. Sé extremadamente conciso.\n" .
                   "3. NO eres veterinario. No diagnostiques.\n" .
-                  "4. FORMATO VISUAL OBLIGATORIO: Usa siempre listas con viñetas (-), **negritas** para resaltar, y párrafos muy cortos.\n\n";
+                  "4. FORMATO VISUAL OBLIGATORIO: Usa listas con viñetas (-), **negritas** para resaltar, y párrafos muy cortos.\n\n";
 
         $promptCompleto = $reglas . "Contexto de la mascota:\n" . $contexto . "\n\nPregunta del usuario:\n" . $mensajeUsuario;
 
         $apiKey = trim(env('GEMINI_API_KEY'));
-        
-        // Usamos el modelo estable 1.5-flash oficial
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={$apiKey}";
         
         try {
-            $maxIntentos = 3;
-            $intento = 0;
-            $exito = false;
-            $respuesta = null;
+            $respuesta = Http::post($url, [
+        'contents' => [
+            [
+                'parts' => [
+                    ['text' => $promptCompleto]
+                ]
+            ]
+        ],
+        // Agrega este bloque de configuración para permitir respuestas más extensas
+        'generationConfig' => [
+            'maxOutputTokens' => 1000,
+            'temperature' => 0.7
+        ]
+    ]);
 
-            // BUCLE MÁGICO: Si Google falla, Laravel lo reintenta silenciosamente hasta 3 veces
-            while ($intento < $maxIntentos && !$exito) {
-                $respuesta = \Illuminate\Support\Facades\Http::post($url, [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                ['text' => $promptCompleto]
-                            ]
-                        ]
-                    ]
-                ]);
-
-                if ($respuesta->successful()) {
-                    $exito = true;
-                } else {
-                    $intento++;
-                    sleep(2); // Espera 2 segundos exactos antes del siguiente intento
-                }
-            }
-
-            if ($exito) {
+            if ($respuesta->successful()) {
                 $datos = $respuesta->json();
                 $textoIA = $datos['candidates'][0]['content']['parts'][0]['text'] ?? 'Lo siento, hubo un problema al generar la respuesta.';
                 return response()->json(['respuesta' => $textoIA]);
             }
 
-            // Si de verdad falló 3 veces seguidas (muy raro), mandamos algo súper amigable
+            // Si Google rechaza la petición, mostramos el error exacto en el chat para diagnosticar
+            $errorDetalle = $respuesta->json('error.message') ?? 'Clave de API inválida o error desconocido.';
             return response()->json([
-                'respuesta' => '¡Hola! Estoy analizando los datos de tu mascota pero mi servidor está un poquito lento. ¿Me repites la pregunta en un minuto por favor?'
-            ]);
+                'respuesta' => '⚠️ Error de la API de Google: ' . $errorDetalle
+            ], 500);
 
         } catch (\Exception $e) {
-            return response()->json(['respuesta' => 'Lo siento, tuve un problema de conexión. ¿Podrías intentar de nuevo?']);
+            return response()->json(['respuesta' => 'Excepción en el servidor: ' . $e->getMessage()], 500);
         }
     }
 }

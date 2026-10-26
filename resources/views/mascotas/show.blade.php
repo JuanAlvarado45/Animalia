@@ -1,63 +1,24 @@
 <x-app-layout>
-    <!-- 1. Cargamos Marked.js primero para que esté listo cuando Alpine lo necesite -->
+    <!-- 1. Cargamos Marked.js primero -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <!-- 2. Estilos ultra profesionales para el contenido generado por IA (Markdown) -->
+    <!-- 2. Estilos para el contenido generado por IA (Markdown) -->
     <style>
-        /* Tipografía y espaciado general */
         .chat-markdown { line-height: 1.6; }
         .chat-markdown p { margin-bottom: 0.75rem; }
         .chat-markdown p:last-child { margin-bottom: 0; }
-        
-        /* Negritas y énfasis */
         .chat-markdown strong { font-weight: 800 !important; color: #0f172a; }
         .chat-markdown em { font-style: italic; }
-
-        /* Listas hermosas (Usamos !important para vencer el reseteo de Tailwind) */
-        .chat-markdown ul { 
-            list-style-type: disc !important; 
-            padding-left: 1.5rem !important; 
-            margin-bottom: 0.75rem !important; 
-        }
-        .chat-markdown ol { 
-            list-style-type: decimal !important; 
-            padding-left: 1.5rem !important; 
-            margin-bottom: 0.75rem !important; 
-        }
+        .chat-markdown ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin-bottom: 0.75rem !important; }
+        .chat-markdown ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin-bottom: 0.75rem !important; }
         .chat-markdown li { margin-bottom: 0.25rem; }
-
-        /* Tablas profesionales */
-        .chat-markdown table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0.75rem;
-            margin-bottom: 0.75rem;
-            font-size: 0.875rem;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        }
-        .chat-markdown th {
-            background-color: #f1f5f9;
-            font-weight: 600;
-            text-align: left;
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .chat-markdown td {
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
+        .chat-markdown table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; margin-bottom: 0.75rem; font-size: 0.875rem; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+        .chat-markdown th { background-color: #f1f5f9; font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        .chat-markdown td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
         .chat-markdown tr:last-child td { border-bottom: none; }
-        
-        /* Títulos si la IA los genera */
-        .chat-markdown h3, .chat-markdown h4 {
-            font-weight: 600;
-            color: #1e293b;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-        }
+        .chat-markdown h3, .chat-markdown h4 { font-weight: 600; color: #1e293b; margin-top: 1rem; margin-bottom: 0.5rem; }
     </style>
+    
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -104,7 +65,6 @@
                         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                             <div>
                                 <h3 class="text-2xl font-bold text-gray-900">{{ $mascota->nombre }}</h3>
-                                <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{$mascota->raza }} @endif</p>
                                 <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{ $mascota->raza }} @endif</p>
                             </div>
                             @if ($mascota->extraviado)
@@ -144,8 +104,8 @@
                     </div>
                 </div>
             </div>
+
             <!-- Alertas médicas -->
-            <!-- Alertas médicas (visibles en el perfil público QR si la mascota se reporta extraviada) -->
             <div class="bg-white rounded-xl shadow-md p-6">
                 <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -218,7 +178,6 @@
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex flex-wrap justify-between items-center gap-2">
-                                        <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{$r->titulo }}</p>
                                         <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{ $r->titulo }}</p>
                                         @if ($r->estado_actual === 'vencido')
                                             <span class="text-xs font-medium bg-red-100 text-red-600 px-2 py-1 rounded-full">Vencido</span>
@@ -339,7 +298,6 @@
                         <form method="POST" action="{{ route('mascotas.update', $mascota) }}" enctype="multipart/form-data" class="space-y-4">
                             @csrf
                             @method('PUT')
-                            <!-- Se reenvían los campos requeridos por la validación de update() -->
                             <input type="hidden" name="nombre" value="{{ $mascota->nombre }}">
                             <input type="hidden" name="especie" value="{{ $mascota->especie }}">
                             <input type="hidden" name="raza" value="{{ $mascota->raza }}">
@@ -385,6 +343,7 @@
             }
         }
     </script>
+
     <!-- ========================================== -->
     <!-- CHATBOT IA - ANIMALÍA (Alpine.js)          -->
     <!-- ========================================== -->
@@ -430,16 +389,12 @@
                     <div :class="msg.rol === 'user' ? 'self-end bg-primary text-white rounded-br-none' : 'self-start bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm chat-markdown'" 
                          class="px-4 py-3 rounded-2xl max-w-[85%] text-sm">
                         
-                        <!-- Si es el usuario, texto normal -->
                         <div x-show="msg.rol === 'user'" x-text="msg.texto"></div>
-                        
-                        <!-- Si es el bot, renderizamos el HTML interpretado por marked.js -->
                         <div x-show="msg.rol === 'bot'" x-html="marked.parse(msg.texto)"></div>
                         
                     </div>
                 </template>
 
-                <!-- Animación de "escribiendo..." -->
                 <div x-show="cargando" class="self-start bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-1">
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
@@ -463,8 +418,7 @@
     </div>
 
     <script>
-function chatBotMascota() {
-            // Creamos una clave única para esta mascota para que los chats no se mezclen
+        function chatBotMascota() {
             const storageKey = 'chat_animalia_{{ $mascota->id }}';
 
             return {
@@ -474,13 +428,11 @@ function chatBotMascota() {
                 historial: [],
 
                 init() {
-                    // Al cargar el componente, intentamos recuperar el historial
                     const historialGuardado = sessionStorage.getItem(storageKey);
                     
                     if (historialGuardado) {
                         this.historial = JSON.parse(historialGuardado);
                     } else {
-                        // Si no hay historial previo, ponemos el mensaje de bienvenida
                         this.historial = [
                             { rol: 'bot', texto: '¡Hola! Soy la IA de Animalía. ¿En qué te puedo asesorar hoy sobre {{ $mascota->nombre }}?' }
                         ];
@@ -494,7 +446,6 @@ function chatBotMascota() {
                 },
 
                 guardarHistorial() {
-                    // Guarda el array actual en el sessionStorage del navegador
                     sessionStorage.setItem(storageKey, JSON.stringify(this.historial));
                 },
 
@@ -503,13 +454,12 @@ function chatBotMascota() {
 
                     const textoUsuario = this.mensajeNuevo;
                     this.historial.push({ rol: 'user', texto: textoUsuario });
-                    this.guardarHistorial(); // Guardamos después de agregar el mensaje del usuario
+                    this.guardarHistorial();
 
                     this.mensajeNuevo = '';
                     this.cargando = true;
                     this.hacerScrollAbajo();
 
-                    // Petición real al backend de Laravel
                     fetch(`/mascotas/{{ $mascota->id }}/chat`, {
                         method: 'POST',
                         headers: {
@@ -523,13 +473,13 @@ function chatBotMascota() {
                     .then(data => {
                         this.cargando = false;
                         this.historial.push({ rol: 'bot', texto: data.respuesta });
-                        this.guardarHistorial(); // Guardamos después de agregar la respuesta del bot
+                        this.guardarHistorial();
                         this.hacerScrollAbajo();
                     })
                     .catch(error => {
                         this.cargando = false;
                         this.historial.push({ rol: 'bot', texto: 'Hubo un error de conexión con el servidor.' });
-                        this.guardarHistorial(); // Guardamos incluso si hubo error
+                        this.guardarHistorial();
                         this.hacerScrollAbajo();
                         console.error('Error:', error);
                     });
@@ -544,5 +494,4 @@ function chatBotMascota() {
             }
         }
     </script>
-</x-app-layout>
 </x-app-layout>
