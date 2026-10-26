@@ -1,4 +1,63 @@
 <x-app-layout>
+    <!-- 1. Cargamos Marked.js primero para que esté listo cuando Alpine lo necesite -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- 2. Estilos ultra profesionales para el contenido generado por IA (Markdown) -->
+    <style>
+        /* Tipografía y espaciado general */
+        .chat-markdown { line-height: 1.6; }
+        .chat-markdown p { margin-bottom: 0.75rem; }
+        .chat-markdown p:last-child { margin-bottom: 0; }
+        
+        /* Negritas y énfasis */
+        .chat-markdown strong { font-weight: 800 !important; color: #0f172a; }
+        .chat-markdown em { font-style: italic; }
+
+        /* Listas hermosas (Usamos !important para vencer el reseteo de Tailwind) */
+        .chat-markdown ul { 
+            list-style-type: disc !important; 
+            padding-left: 1.5rem !important; 
+            margin-bottom: 0.75rem !important; 
+        }
+        .chat-markdown ol { 
+            list-style-type: decimal !important; 
+            padding-left: 1.5rem !important; 
+            margin-bottom: 0.75rem !important; 
+        }
+        .chat-markdown li { margin-bottom: 0.25rem; }
+
+        /* Tablas profesionales */
+        .chat-markdown table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        .chat-markdown th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .chat-markdown td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .chat-markdown tr:last-child td { border-bottom: none; }
+        
+        /* Títulos si la IA los genera */
+        .chat-markdown h3, .chat-markdown h4 {
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -45,6 +104,7 @@
                         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                             <div>
                                 <h3 class="text-2xl font-bold text-gray-900">{{ $mascota->nombre }}</h3>
+                                <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{$mascota->raza }} @endif</p>
                                 <p class="text-gray-500">{{ ucfirst($mascota->especie) }}@if($mascota->raza) · {{ $mascota->raza }} @endif</p>
                             </div>
                             @if ($mascota->extraviado)
@@ -84,7 +144,7 @@
                     </div>
                 </div>
             </div>
-
+            <!-- Alertas médicas -->
             <!-- Alertas médicas (visibles en el perfil público QR si la mascota se reporta extraviada) -->
             <div class="bg-white rounded-xl shadow-md p-6">
                 <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -158,6 +218,7 @@
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex flex-wrap justify-between items-center gap-2">
+                                        <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{$r->titulo }}</p>
                                         <p class="font-medium text-gray-900">{{ $r->tipo_label }} — {{ $r->titulo }}</p>
                                         @if ($r->estado_actual === 'vencido')
                                             <span class="text-xs font-medium bg-red-100 text-red-600 px-2 py-1 rounded-full">Vencido</span>
@@ -324,4 +385,164 @@
             }
         }
     </script>
+    <!-- ========================================== -->
+    <!-- CHATBOT IA - ANIMALÍA (Alpine.js)          -->
+    <!-- ========================================== -->
+    <div x-data="chatBotMascota()" class="fixed bottom-6 right-6 z-50 font-sans">
+        
+        <!-- Botón flotante para abrir el chat -->
+        <button @click="abrirChat()" x-show="!abierto" x-transition.scale
+            class="bg-primary hover:bg-primary-dark text-white rounded-full p-4 shadow-2xl flex items-center justify-center transition-transform hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+        </button>
+
+        <!-- Ventana del Chat -->
+        <div x-show="abierto" style="display: none;"
+            x-transition:enter="transition ease-out duration-300 transform"
+            x-transition:enter-start="opacity-0 translate-y-10 scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="transition ease-in duration-200 transform"
+            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+            x-transition:leave-end="opacity-0 translate-y-10 scale-95"
+            class="bg-white w-80 sm:w-96 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[500px]">
+            
+            <!-- Cabecera del Chat -->
+            <div class="bg-primary p-4 flex justify-between items-center text-white shadow-md z-10">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-full">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Asistente Animalía</h3>
+                        <p class="text-xs text-primary-100 opacity-80">Consultor de {{ $mascota->nombre }}</p>
+                    </div>
+                </div>
+                <button @click="abierto = false" class="text-white hover:text-gray-200 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Área de mensajes -->
+            <div id="contenedor-mensajes" class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
+                <template x-for="(msg, index) in historial" :key="index">
+                    <div :class="msg.rol === 'user' ? 'self-end bg-primary text-white rounded-br-none' : 'self-start bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm chat-markdown'" 
+                         class="px-4 py-3 rounded-2xl max-w-[85%] text-sm">
+                        
+                        <!-- Si es el usuario, texto normal -->
+                        <div x-show="msg.rol === 'user'" x-text="msg.texto"></div>
+                        
+                        <!-- Si es el bot, renderizamos el HTML interpretado por marked.js -->
+                        <div x-show="msg.rol === 'bot'" x-html="marked.parse(msg.texto)"></div>
+                        
+                    </div>
+                </template>
+
+                <!-- Animación de "escribiendo..." -->
+                <div x-show="cargando" class="self-start bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-1">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                </div>
+            </div>
+
+            <!-- Input de texto -->
+            <div class="p-3 bg-white border-t border-gray-100">
+                <form @submit.prevent="enviarMensaje" class="flex gap-2">
+                    <input type="text" x-model="mensajeNuevo" placeholder="Pregunta sobre {{ $mascota->nombre }}..." 
+                        class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+                        :disabled="cargando" autocomplete="off">
+                    <button type="submit" :disabled="mensajeNuevo.trim() === '' || cargando"
+                        class="bg-primary text-white rounded-full p-2 w-10 h-10 flex items-center justify-center hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+function chatBotMascota() {
+            // Creamos una clave única para esta mascota para que los chats no se mezclen
+            const storageKey = 'chat_animalia_{{ $mascota->id }}';
+
+            return {
+                abierto: false,
+                mensajeNuevo: '',
+                cargando: false,
+                historial: [],
+
+                init() {
+                    // Al cargar el componente, intentamos recuperar el historial
+                    const historialGuardado = sessionStorage.getItem(storageKey);
+                    
+                    if (historialGuardado) {
+                        this.historial = JSON.parse(historialGuardado);
+                    } else {
+                        // Si no hay historial previo, ponemos el mensaje de bienvenida
+                        this.historial = [
+                            { rol: 'bot', texto: '¡Hola! Soy la IA de Animalía. ¿En qué te puedo asesorar hoy sobre {{ $mascota->nombre }}?' }
+                        ];
+                        this.guardarHistorial();
+                    }
+                },
+
+                abrirChat() {
+                    this.abierto = true;
+                    this.hacerScrollAbajo();
+                },
+
+                guardarHistorial() {
+                    // Guarda el array actual en el sessionStorage del navegador
+                    sessionStorage.setItem(storageKey, JSON.stringify(this.historial));
+                },
+
+                enviarMensaje() {
+                    if (this.mensajeNuevo.trim() === '') return;
+
+                    const textoUsuario = this.mensajeNuevo;
+                    this.historial.push({ rol: 'user', texto: textoUsuario });
+                    this.guardarHistorial(); // Guardamos después de agregar el mensaje del usuario
+
+                    this.mensajeNuevo = '';
+                    this.cargando = true;
+                    this.hacerScrollAbajo();
+
+                    // Petición real al backend de Laravel
+                    fetch(`/mascotas/{{ $mascota->id }}/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ mensaje: textoUsuario })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.cargando = false;
+                        this.historial.push({ rol: 'bot', texto: data.respuesta });
+                        this.guardarHistorial(); // Guardamos después de agregar la respuesta del bot
+                        this.hacerScrollAbajo();
+                    })
+                    .catch(error => {
+                        this.cargando = false;
+                        this.historial.push({ rol: 'bot', texto: 'Hubo un error de conexión con el servidor.' });
+                        this.guardarHistorial(); // Guardamos incluso si hubo error
+                        this.hacerScrollAbajo();
+                        console.error('Error:', error);
+                    });
+                },
+
+                hacerScrollAbajo() {
+                    setTimeout(() => {
+                        const contenedor = document.getElementById('contenedor-mensajes');
+                        if(contenedor) contenedor.scrollTop = contenedor.scrollHeight;
+                    }, 100);
+                }
+            }
+        }
+    </script>
+</x-app-layout>
 </x-app-layout>

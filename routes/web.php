@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     // Otras vistas
     Route::get('/medicina-preventiva', [MedicinaController::class, 'index'])->name('medicina.index');
     Route::get('/mapa-emergencias', function () {return view('mapa.index');})->name('mapa.index');
+    Route::post('/mascotas/{mascota}/chat', [App\Http\Controllers\MascotaController::class, 'consultarIA'])->name('mascotas.chat');
 });
 
 require __DIR__.'/auth.php';
