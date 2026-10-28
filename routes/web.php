@@ -17,8 +17,7 @@ Route::get('/', function () {
 // RUTA PÚBLICA: Perfil de la mascota al escanear el QR
 // (Cualquier persona con un celular puede acceder)
 // =========================================================
-Route::get('/qr/{mascota:codigo_qr}', [MascotaController::class, 'perfilQr'])->name('mascotas.qr');
-
+Route::get('/qr/{mascota}', [MascotaController::class, 'perfilQr'])->name('mascotas.qr');
 // =========================================================
 // DASHBOARD: redirige según el rol del usuario
 // =========================================================
