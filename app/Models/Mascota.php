@@ -99,4 +99,9 @@ class Mascota extends Model
         $ultimo = array_pop($partes);
         return implode(', ', $partes) . ' y ' . $ultimo;
     }
+
+    public function consultas()
+    {
+        return $this->hasMany(Consulta::class);
+    }
 }
