@@ -41,7 +41,34 @@ class Mascota extends Model
 
         static::creating(function ($mascota) {
             $mascota->codigo_qr = (string) Str::uuid();
+            $mascota->codigo_busqueda = static::generarCodigoBusqueda();
         });
+    }
+
+    /**
+     * Código corto de 6 caracteres, sin letras confusas (0, O, 1, I, L).
+     * Para cambiar el largo o usar solo números, edita $alfabeto y el 6.
+     */
+    public static function generarCodigoBusqueda(): string
+    {
+        $alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+        do {
+            $codigo = '';
+            for ($i = 0; $i < 6; $i++) {
+                $codigo .= $alfabeto[random_int(0, strlen($alfabeto) - 1)];
+            }
+        } while (static::where('codigo_busqueda', $codigo)->exists());
+
+        return $codigo;
+    }
+
+    // Se muestra como K7M-4QX para leerlo mejor
+    public function getCodigoFormateadoAttribute(): ?string
+    {
+        return $this->codigo_busqueda
+            ? substr($this->codigo_busqueda, 0, 3).'-'.substr($this->codigo_busqueda, 3)
+            : null;
     }
 
     public function user()

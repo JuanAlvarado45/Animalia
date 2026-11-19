@@ -24,34 +24,69 @@
             @endif
 
             <!-- Datos de la mascota -->
-            <div class="bg-white rounded-xl shadow-md p-6 flex gap-6">
-                <div class="w-28 h-28 rounded-xl bg-primary/10 overflow-hidden shrink-0 flex items-center justify-center">
+            @php
+                $edad = null;
+                if ($mascota->fecha_nacimiento) {
+                    $d = $mascota->fecha_nacimiento->diff(now());
+                    if ($d->y > 0) {
+                        $edad = $d->y.($d->y == 1 ? ' año' : ' años').($d->m ? ' y '.$d->m.($d->m == 1 ? ' mes' : ' meses') : '');
+                    } elseif ($d->m > 0) {
+                        $edad = $d->m.($d->m == 1 ? ' mes' : ' meses');
+                    } else {
+                        $edad = $d->d.($d->d == 1 ? ' día' : ' días');
+                    }
+                }
+            @endphp
+
+            <div class="bg-white rounded-xl shadow-md overflow-hidden flex">
+                <!-- Foto -->
+                <div class="relative w-40 sm:w-52 shrink-0 min-h-[11rem] bg-primary/10 flex items-center justify-center">
                     @if ($mascota->foto)
-                        <img src="{{ Storage::url($mascota->foto) }}" alt="{{ $mascota->nombre }}" class="w-full h-full object-cover">
+                        <img src="{{ Storage::url($mascota->foto) }}" alt="{{ $mascota->nombre }}"
+                            class="absolute inset-0 w-full h-full object-cover">
                     @else
-                        <span class="text-primary/40 text-xs">Sin foto</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 12c2.5 0 4.5-2.24 4.5-5S14.5 2 12 2 7.5 4.24 7.5 7s2 5 4.5 5zM5 22c0-4.5 3-8 7-8s7 3.5 7 8" />
+                        </svg>
                     @endif
                 </div>
 
-                <dl class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm flex-1">
-                    <dt class="text-gray-500">Nombre</dt>
-                    <dd class="font-medium text-gray-900">{{ $mascota->nombre }}</dd>
+                <!-- Datos -->
+                <div class="p-6 flex-1 min-w-0">
+                    <div class="flex justify-between items-start gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">{{ $mascota->nombre }}</h3>
+                            <p class="text-sm text-gray-500">
+                                {{ ucfirst($mascota->especie) }}@if ($mascota->raza) · {{ $mascota->raza }}@endif
+                            </p>
+                        </div>
 
-                    <dt class="text-gray-500">Especie</dt>
-                    <dd class="font-medium text-gray-900">{{ ucfirst($mascota->especie) }}</dd>
+                        @if ($mascota->extraviado)
+                            <span class="text-xs font-medium bg-red-100 text-red-600 px-2 py-1 rounded-full shrink-0">Extraviada</span>
+                        @else
+                            <span class="text-xs font-medium bg-green-100 text-green-700 px-2 py-1 rounded-full shrink-0">Con su familia</span>
+                        @endif
+                    </div>
 
-                    <dt class="text-gray-500">Raza</dt>
-                    <dd class="font-medium text-gray-900">{{ $mascota->raza ?? 'No especificada' }}</dd>
-
-                    <dt class="text-gray-500">Sexo</dt>
-                    <dd class="font-medium text-gray-900">{{ $mascota->sexo ? ucfirst($mascota->sexo) : 'No especificado' }}</dd>
-
-                    <dt class="text-gray-500">Nacimiento</dt>
-                    <dd class="font-medium text-gray-900">{{ $mascota->fecha_nacimiento?->format('d/m/Y') ?? 'No registrada' }}</dd>
-
-                    <dt class="text-gray-500">Peso</dt>
-                    <dd class="font-medium text-gray-900">{{ $mascota->peso ? $mascota->peso.' kg' : 'No registrado' }}</dd>
-                </dl>
+                    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 text-sm">
+                        <div>
+                            <dt class="text-xs text-gray-400">Sexo</dt>
+                            <dd class="font-medium text-gray-900">{{ $mascota->sexo ? ucfirst($mascota->sexo) : '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400">Edad</dt>
+                            <dd class="font-medium text-gray-900">{{ $edad ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400">Peso</dt>
+                            <dd class="font-medium text-gray-900">{{ $mascota->peso ? $mascota->peso.' kg' : '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-gray-400">Nacimiento</dt>
+                            <dd class="font-medium text-gray-900">{{ $mascota->fecha_nacimiento?->format('d/m/Y') ?? '—' }}</dd>
+                        </div>
+                    </dl>
+                </div>
             </div>
 
             <!-- Información médica -->

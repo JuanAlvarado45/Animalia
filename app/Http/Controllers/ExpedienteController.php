@@ -6,6 +6,7 @@ use App\Models\Mascota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 
 class ExpedienteController extends Controller
 {
@@ -15,32 +16,45 @@ class ExpedienteController extends Controller
         return view('veterinario.buscar');
     }
 
-    // Procesa la búsqueda
-    public function buscar(Request $request)
+   public function buscar(Request $request)
     {
         $request->validate([
             'codigo' => ['required', 'string', 'max:255'],
         ]);
 
-        $codigo = $request->input('codigo');
+        $llave = 'buscar-expediente:'.Auth::id();
 
-        // Si el usuario pegó un enlace completo, extraemos solo la parte final
-        if (filter_var($codigo, FILTER_VALIDATE_URL)) {
-            $segmentos = explode('/', rtrim($codigo, '/'));
-            $codigo = end($segmentos);
+        if (RateLimiter::tooManyAttempts($llave, 10)) {
+            $minutos = (int) ceil(RateLimiter::availableIn($llave) / 60);
+
+            return back()->withInput()->withErrors([
+                'codigo' => "Demasiados intentos fallidos. Intenta de nuevo en {$minutos} minuto(s).",
+            ]);
         }
 
-        // Buscamos la mascota. 
- 
-        $mascota = Mascota::where('id', $codigo)
-                          ->orWhere('codigo_qr', $codigo)
-                          ->first();
+        $entrada = trim($request->codigo);
+        $posibleUuid = Str::afterLast(rtrim($entrada, '/'), '/');
+
+        if (Str::isUuid($posibleUuid)) {
+            // UUID o enlace completo del QR
+            $mascota = Mascota::where('codigo_qr', $posibleUuid)->first();
+        } else {
+            // Código corto: acepta minúsculas, espacios y guion
+            $corto = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $entrada));
+            $mascota = $corto !== ''
+                ? Mascota::where('codigo_busqueda', $corto)->first()
+                : null;
+        }
 
         if (! $mascota) {
-            return back()
-                ->withInput()
-                ->withErrors(['codigo' => 'No encontramos una mascota con ese código o enlace.']);
+            RateLimiter::hit($llave, 600); // cuenta el fallo durante 10 minutos
+
+            return back()->withInput()->withErrors([
+                'codigo' => 'No encontramos una mascota con ese código.',
+            ]);
         }
+
+        RateLimiter::clear($llave);
 
         return redirect()->route('expediente.show', $mascota);
     }

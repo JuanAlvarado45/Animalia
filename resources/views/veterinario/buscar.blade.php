@@ -10,14 +10,14 @@
             <div class="bg-white rounded-xl shadow-md p-8">
 
                 <p class="text-sm text-gray-500 mb-5">
-                    Escanea el QR de la placa y pega aquí el enlace, o escribe el código de la mascota.
+                    Coloca el codigo unico de cada mascota que aparece en el QR o pidelo al dueño.
                 </p>
 
                 <form method="POST" action="{{ route('expediente.buscar') }}" class="space-y-4">
                     @csrf
 
                     <div>
-                        <x-input-label for="codigo" :value="__('Código o enlace del QR')" />
+                        <x-input-label for="codigo" :value="__('Código de busqueda')" />
                         <x-text-input id="codigo" name="codigo" type="text" class="block mt-1 w-full"
                                       :value="old('codigo')" required autofocus />
                         <x-input-error :messages="$errors->get('codigo')" class="mt-2" />

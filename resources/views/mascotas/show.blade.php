@@ -74,6 +74,25 @@
                             @endif
                         </div>
 
+                        <!-- Código de búsqueda -->
+                        @if ($mascota->codigo_busqueda)
+                            <div x-data="{ copiado: false }" class="mb-5">
+                                <div class="inline-flex items-center gap-4 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2.5">
+                                    <div>
+                                        <p class="text-xs text-gray-400">Código de búsqueda</p>
+                                        <p class="text-xl font-bold tracking-widest text-primary-dark">{{ $mascota->codigo_formateado }}</p>
+                                    </div>
+                                    <button type="button"
+                                            @click="navigator.clipboard.writeText('{{ $mascota->codigo_busqueda }}'); copiado = true; setTimeout(() => copiado = false, 2000)"
+                                            class="text-xs px-3 py-1.5 rounded-md border border-primary text-primary font-medium hover:bg-primary hover:text-white transition"
+                                            x-text="copiado ? '¡Copiado!' : 'Copiar'">
+                                        Copiar
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-2">Compártelo con tu veterinario para que encuentre el expediente de {{ $mascota->nombre }}.</p>
+                            </div>
+                        @endif
+
                         <dl class="grid grid-cols-2 sm:grid-cols-4 gap-y-4 text-sm">
                             <div>
                                 <dt class="text-gray-400">Sexo</dt>
@@ -222,7 +241,47 @@
                     </div>
                 @endif
             </div>
-        </div>
+       
+
+            <!-- Consultas veterinarias -->
+                @php
+                    $consultas = $mascota->consultas()->with('veterinaria')->latest('fecha_consulta')->get();
+                @endphp
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="font-semibold text-gray-900 mb-4">Consultas veterinarias</h3>
+
+                    @forelse ($consultas as $c)
+                        <div class="py-4 border-b border-gray-100 last:border-0">
+                            <div class="flex justify-between items-start gap-3">
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ $c->motivo }}</p>
+                                    <p class="text-xs text-primary">{{ $c->veterinaria?->nombre_clinica ?? 'Clínica no disponible' }}</p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="text-xs text-gray-500">{{ $c->fecha_consulta->format('d/m/Y') }}</span>
+                                    @if ($c->created_at->gt(now()->subDays(7)))
+                                        <span class="ml-2 text-xs font-medium bg-secondary/10 text-secondary px-2 py-1 rounded-full">Nueva</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            @if ($c->diagnostico)
+                                <p class="text-sm text-gray-600 mt-2"><span class="text-gray-500">Diagnóstico:</span> {{ $c->diagnostico }}</p>
+                            @endif
+                            @if ($c->tratamiento)
+                                <p class="text-sm text-gray-600"><span class="text-gray-500">Tratamiento:</span> {{ $c->tratamiento }}</p>
+                            @endif
+                            @if ($c->veterinaria?->telefono)
+                                <p class="text-xs text-gray-400 mt-2">Contacto de la clínica: {{ $c->veterinaria->telefono }}</p>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 text-center py-4">Aún no hay consultas registradas para {{ $mascota->nombre }}.</p>
+                    @endforelse
+                </div>
+            </div>
+       
 
         <!-- MODAL: Agregar recordatorio -->
         <template x-teleport="body">

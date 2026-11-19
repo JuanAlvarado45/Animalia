@@ -49,16 +49,13 @@
             @endif
             
             <!-- Accesos rápidos -->
-            <div class="grid sm:grid-cols-2 gap-6">
+            <div class="grid sm:grid gap-6">
                 <a href="{{ route('expediente.index') }}" class="group bg-white rounded-xl shadow-md p-6 border-2 border-transparent hover:border-primary hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                     <h4 class="font-semibold text-gray-900">Buscar mascota</h4>
-                    <p class="text-sm text-gray-500 mt-1">Consulta el expediente con el código QR.</p>
+                    <p class="text-sm text-gray-500 mt-1">Consulta el expediente de las mascotas.</p>
                 </a>
 
-                <a href="{{ route('expediente.index') }}" class="group bg-white rounded-xl shadow-md p-6 border-2 border-transparent hover:border-secondary hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                    <h4 class="font-semibold text-gray-900">Registrar consulta</h4>
-                    <p class="text-sm text-gray-500 mt-1">Agrega consultas y vacunas aplicadas.</p>
-                </a>
+               
             </div>
 
             <!-- Últimas consultas registradas -->
