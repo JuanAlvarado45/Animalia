@@ -6,7 +6,7 @@
     </x-slot>
 
     <!-- Estado Global con Alpine.js -->
-    <div x-data="qrComponent()" class="py-10">
+    <div x-data="qrComponent()" @keydown.escape.window="mostrarModalQR = false; mostrarModalEliminar = false" class="py-10">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
 
             @if (session('success'))
@@ -51,7 +51,7 @@
                                 </a>
                                 
                                 <button type="button" 
-                                    @click="gestionarQR({{ $mascota->id }}, '{{ $mascota->nombre }}', '{{ $mascota->qr_path ? Storage::url($mascota->qr_path) : '' }}')" 
+                                    @click="gestionarQR({{ $mascota->id }}, @js($mascota->nombre), '{{ $mascota->qr_path ? Storage::url($mascota->qr_path) : '' }}')" 
                                     class="flex-1 text-center text-sm py-2 rounded-md bg-primary/10 text-primary font-medium hover:bg-primary hover:text-white transition cursor-pointer">
                                     Ver QR
                                 </button>
@@ -60,11 +60,13 @@
                             <div class="flex gap-2 mt-2 pt-2 border-t border-gray-100">
                                 <a href="{{ route('mascotas.edit', $mascota) }}" class="flex-1 text-center text-sm py-2 rounded-md border border-yellow-400 text-yellow-600 font-medium hover:bg-yellow-500 hover:text-white hover:border-yellow-500 transition-all duration-200">Editar</a>
                                 
-                                <!-- Formulario de eliminación -->
+                                <!-- Formulario de eliminación con modal personalizado -->
                                 <form action="{{ route('mascotas.destroy', $mascota) }}" method="POST" class="flex-1">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="w-full text-center text-sm py-2 rounded-md border border-red-400 text-red-500 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200" onclick="return confirm('¿Seguro que deseas eliminarla?')">
+                                    <button type="button"
+                                        @click="abrirModalEliminar($el.closest('form'), @js($mascota->nombre))"
+                                        class="w-full text-center text-sm py-2 rounded-md border border-red-400 text-red-500 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 cursor-pointer">
                                         Eliminar
                                     </button>
                                 </form>
@@ -132,6 +134,56 @@
                 </div>
             </div>
         </template>
+
+        <!-- MODAL DE CONFIRMACIÓN PARA ELIMINAR MASCOTA -->
+        <template x-teleport="body">
+            <div x-show="mostrarModalEliminar" style="display: none;" class="fixed inset-0 z-[9999] overflow-y-auto">
+                <div x-show="mostrarModalEliminar"
+                     x-transition.opacity
+                     class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity"
+                     @click="mostrarModalEliminar = false">
+                </div>
+
+                <div class="flex items-center justify-center min-h-screen p-4 z-50 relative">
+                    <div x-show="mostrarModalEliminar"
+                         x-transition:enter="ease-out duration-300"
+                         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                         x-transition:leave="ease-in duration-200"
+                         x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                         class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center transform transition-all">
+
+                        <!-- Ícono de advertencia -->
+                        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+
+                        <h3 class="text-xl font-bold text-gray-900 mb-1">
+                            ¿Eliminar a <span class="text-red-600" x-text="mascotaEliminarNombre"></span>?
+                        </h3>
+                        <p class="text-xs text-gray-500 leading-relaxed mt-2">
+                            Se eliminará de forma permanente su perfil, su historial veterinario y su código QR asociado. Esta acción no se puede deshacer.
+                        </p>
+
+                        <div class="grid grid-cols-2 gap-3 mt-6">
+                            <button @click="mostrarModalEliminar = false" type="button"
+                                    class="py-2.5 px-3 rounded-lg border border-gray-300 text-gray-600 font-semibold text-xs hover:bg-gray-50 transition">
+                                Cancelar
+                            </button>
+                            <button @click="confirmarEliminacion()" type="button"
+                                    style="background-color: #dc2626;"
+                                    class="py-2.5 px-3 rounded-lg text-white font-semibold text-xs hover:opacity-90 transition shadow-md">
+                                Sí, eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 
     <!-- Scripts -->
@@ -149,25 +201,38 @@
                 qrDataUrl: '',
                 isGenerating: false,
                 
-                // NUEVO: Diccionario para recordar qué mascotas ya tienen su QR en esta sesión
+                // Estado para el modal de eliminación
+                mostrarModalEliminar: false,
+                mascotaEliminarNombre: '',
+                formEliminar: null,
+
+                // Diccionario para recordar qué mascotas ya tienen su QR en esta sesión
                 qrsMemoria: {},
+
+                abrirModalEliminar(form, nombre) {
+                    this.formEliminar = form;
+                    this.mascotaEliminarNombre = nombre;
+                    this.mostrarModalEliminar = true;
+                },
+
+                confirmarEliminacion() {
+                    if (this.formEliminar) {
+                        this.formEliminar.submit();
+                    }
+                },
 
                 gestionarQR(id, nombre, urlGuardada) {
                     this.nombreMascota = nombre;
                     
-                    // Comprobamos si la ruta ya viene de la BD (urlGuardada) 
-                    // O si la acabamos de generar y la tenemos en la memoria (qrsMemoria)
                     const rutaDefinitiva = this.qrsMemoria[id] || urlGuardada;
 
-                    // Si ya existe una ruta definitiva, no preguntamos, abrimos directo el modal
                     if (rutaDefinitiva !== '') {
                         this.qrDataUrl = rutaDefinitiva;
                         this.mostrarModalQR = true;
                         return;
                     }
 
-                    // Si no existe ninguna de las dos, preguntamos
-                   const urlMascota = `${window.location.origin}/qr/${id}`;
+                    const urlMascota = `${window.location.origin}/qr/${id}`;
 
                     Swal.fire({
                         title: '¡Generar Código QR Único!',
@@ -220,8 +285,6 @@
                             if (data.success) {
                                 this.qrDataUrl = data.qr_url;
                                 this.isGenerating = false;
-                                
-                                // NUEVO: Guardamos la URL devuelta en nuestra "memoria" temporal para ese ID
                                 this.qrsMemoria[id] = data.qr_url;
                                 
                                 Swal.fire({

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'telefono',
         'direccion',
+        'rol',
     ];
 
     /**
@@ -55,5 +56,10 @@ class User extends Authenticatable
     public function mascotas()
     {
         return $this->hasMany(Mascota::class);
+    }
+
+    public function veterinaria()
+    {
+        return $this->hasOne(Veterinaria::class);
     }
 }

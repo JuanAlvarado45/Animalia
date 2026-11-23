@@ -16,6 +16,17 @@
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
+        <!-- Tipo de cuenta -->
+        <div class="mt-4">
+            <x-input-label for="rol" :value="__('Tipo de cuenta')" />
+            <select id="rol" name="rol" required
+                    class="block mt-1 w-full border-gray-300 focus:border-primary focus:ring-primary rounded-md shadow-sm">
+                <option value="propietario" {{ old('rol') == 'propietario' ? 'selected' : '' }}>Soy dueño de una mascota</option>
+                <option value="veterinario" {{ old('rol') == 'veterinario' ? 'selected' : '' }}>Soy médico veterinario</option>
+            </select>
+            <x-input-error :messages="$errors->get('rol')" class="mt-2" />
+        </div>
+
         <!-- Password -->
         <div class="mt-4">
             <x-input-label for="password" :value="__('Contraseña')" />

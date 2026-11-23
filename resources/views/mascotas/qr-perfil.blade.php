@@ -41,6 +41,14 @@
         <div class="p-6">
             <h1 class="text-3xl font-extrabold text-gray-900 text-center mb-1">{{ $mascota->nombre }}</h1>
             <p class="text-center text-gray-500 font-medium mb-4">{{ ucfirst($mascota->especie) }} @if($mascota->raza) • {{ $mascota->raza }} @endif</p>
+            
+            @if ($mascota->codigo_busqueda)
+                <div class="text-center bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 mb-4">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest">Código de búsqueda</p>
+                    <p class="text-3xl font-black tracking-widest text-gray-900 mt-1">{{ $mascota->codigo_formateado }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Si eres veterinario, ingrésalo en tu panel de Animalía.</p>
+                </div>
+            @endif
 
             <!-- Alertas médicas vitales: visibles siempre para cualquier persona que auxilie a la mascota -->
             @if($mascota->alergias || $mascota->condiciones_medicas)
