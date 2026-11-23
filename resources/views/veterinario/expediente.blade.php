@@ -120,11 +120,68 @@
             </div>
 
             <!-- Historial de recordatorios -->
-            <div class="bg-white rounded-xl shadow-md p-6">
+            <div x-data="{ estadoRecordatorio: @js(old('estado', 'aplicado')) }" class="bg-white rounded-xl shadow-md p-6">
                 <h3 class="font-semibold text-gray-900 mb-4">Vacunas y tratamientos</h3>
 
-                @forelse ($mascota->recordatorios->sortBy('fecha_programada') as $r)
-                    <div class="flex justify-between items-start py-3 border-b border-gray-100 last:border-0">
+                @if ($veterinaria)
+                    <form method="POST" action="{{ route('expediente.recordatorios.store', $mascota) }}" class="space-y-4 mb-6 pb-6 border-b border-gray-100">
+                        @csrf
+
+                        <div class="grid sm:grid-cols-3 gap-4">
+                            <div>
+                                <x-input-label for="tipo" :value="__('Tipo')" />
+                                <select id="tipo" name="tipo" required
+                                        class="block mt-1 w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary">
+                                    <option value="vacuna" {{ old('tipo') == 'vacuna' ? 'selected' : '' }}>Vacuna</option>
+                                    <option value="desparasitacion" {{ old('tipo') == 'desparasitacion' ? 'selected' : '' }}>Desparasitación</option>
+                                    <option value="tratamiento" {{ old('tipo') == 'tratamiento' ? 'selected' : '' }}>Tratamiento</option>
+                                </select>
+                                <x-input-error :messages="$errors->get('tipo')" class="mt-2" />
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <x-input-label for="titulo" :value="__('Vacuna o tratamiento')" />
+                                <x-text-input id="titulo" name="titulo" type="text" class="block mt-1 w-full"
+                                            placeholder="Ej. Antirrábica, Séxtuple, Desparasitación interna..."
+                                            :value="old('titulo')" required />
+                                <x-input-error :messages="$errors->get('titulo')" class="mt-2" />
+                            </div>
+                        </div>
+
+                        <div class="grid sm:grid-cols-3 gap-4">
+                            <div>
+                                <x-input-label for="estado" :value="__('Estado')" />
+                                <select id="estado" name="estado" x-model="estadoRecordatorio" required
+                                        class="block mt-1 w-full border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary">
+                                    <option value="aplicado">Aplicado en consulta</option>
+                                    <option value="pendiente">Programar próxima dosis</option>
+                                </select>
+                                <x-input-error :messages="$errors->get('estado')" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="fecha_programada" :value="__('Fecha programada')" />
+                                <x-text-input id="fecha_programada" name="fecha_programada" type="date" class="block mt-1 w-full"
+                                            :value="old('fecha_programada', now()->format('Y-m-d'))" required />
+                                <x-input-error :messages="$errors->get('fecha_programada')" class="mt-2" />
+                            </div>
+
+                            <div x-show="estadoRecordatorio === 'aplicado'">
+                                <x-input-label for="fecha_aplicacion" :value="__('Fecha de aplicación')" />
+                                <x-text-input id="fecha_aplicacion" name="fecha_aplicacion" type="date" class="block mt-1 w-full"
+                                            :value="old('fecha_aplicacion', now()->format('Y-m-d'))" />
+                                <x-input-error :messages="$errors->get('fecha_aplicacion')" class="mt-2" />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="px-5 py-2.5 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition-all duration-200">
+                            Registrar vacuna / tratamiento
+                        </button>
+                    </form>
+                @endif
+
+                @forelse ($mascota->recordatorios->sortByDesc('fecha_programada') as $r)
+                    <div class="flex flex-wrap justify-between items-center gap-3 py-3 border-b border-gray-100 last:border-0">
                         <div>
                             <p class="font-medium text-gray-900">{{ $r->titulo }}</p>
                             <p class="text-sm text-gray-500">
@@ -134,10 +191,24 @@
                                 @endif
                             </p>
                         </div>
-                        <span class="text-xs font-medium px-2 py-1 rounded-full
-                            {{ $r->estado === 'aplicado' ? 'bg-primary/10 text-primary' : ($r->estado === 'vencido' ? 'bg-red-100 text-red-600' : 'bg-secondary/10 text-secondary') }}">
-                            {{ ucfirst($r->estado) }}
-                        </span>
+
+                        <div class="flex items-center gap-2">
+                            @if ($veterinaria && $r->estado !== 'aplicado')
+                                <form method="POST" action="{{ route('expediente.recordatorios.aplicar', [$mascota, $r]) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                            class="text-xs font-medium px-2.5 py-1 rounded-full border border-primary text-primary hover:bg-primary hover:text-white transition">
+                                        ✓ Marcar aplicado
+                                    </button>
+                                </form>
+                            @endif
+
+                            <span class="text-xs font-medium px-2 py-1 rounded-full
+                                {{ $r->estado === 'aplicado' ? 'bg-primary/10 text-primary' : ($r->estado === 'vencido' ? 'bg-red-100 text-red-600' : 'bg-secondary/10 text-secondary') }}">
+                                {{ ucfirst($r->estado) }}
+                            </span>
+                        </div>
                     </div>
                 @empty
                     <p class="text-sm text-gray-500">Esta mascota aún no tiene registros.</p>

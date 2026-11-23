@@ -86,6 +86,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/veterinario/buscar', [ExpedienteController::class, 'buscar'])->name('expediente.buscar');
         Route::get('/veterinario/expediente/{mascota:codigo_qr}', [ExpedienteController::class, 'show'])->name('expediente.show');
         Route::post('/veterinario/expediente/{mascota:codigo_qr}/consultas', [ConsultaController::class, 'store'])->name('consultas.store');
+        Route::post('/veterinario/expediente/{mascota:codigo_qr}/recordatorios', [ExpedienteController::class, 'storeRecordatorio'])->name('expediente.recordatorios.store');
+        Route::patch('/veterinario/expediente/{mascota:codigo_qr}/recordatorios/{recordatorio}/aplicar', [ExpedienteController::class, 'aplicarRecordatorio'])->name('expediente.recordatorios.aplicar');
         Route::get('/veterinario/panel', [VeterinariaController::class, 'panel'])->name('veterinario.panel');
     });
 });
